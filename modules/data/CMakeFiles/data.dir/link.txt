@@ -1,0 +1,2 @@
+/usr/bin/ar cq lib/libdata.a  CMakeFiles/data.dir/test/test.cpp.o CMakeFiles/data.dir/src/file.cpp.o CMakeFiles/data.dir/src/file_basics.cpp.o CMakeFiles/data.dir/src/time_series_reader.cpp.o
+/usr/bin/ranlib lib/libdata.a

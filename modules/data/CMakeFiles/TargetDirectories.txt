@@ -1,0 +1,2 @@
+/home/adrian/Desktop/gpustore/sources/modules/data/CMakeFiles/data_test.dir
+/home/adrian/Desktop/gpustore/sources/modules/data/CMakeFiles/data.dir
