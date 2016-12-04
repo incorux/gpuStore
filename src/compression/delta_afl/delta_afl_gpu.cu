@@ -4,7 +4,8 @@
 #include <stdio.h>
 
 template <typename T, char CWARP_SIZE>
-__device__  void delta_afl_compress_base_gpu (const unsigned int bit_length, unsigned long data_id, unsigned long comp_data_id, T *data, T *compressed_data, T* compressed_data_block_start, unsigned long length)
+__device__  void delta_afl_compress_base_gpu (const unsigned int bit_length, unsigned long data_id, unsigned long comp_data_id, T *data,
+		T *compressed_data, T* compressed_data_block_start, unsigned long length)
 {
 
     if (data_id >= length) 
@@ -161,7 +162,7 @@ __host__ void run_delta_afl_decompress_gpu(const unsigned int bit_length, T *com
 {
     const unsigned int block_size = CWARP_SIZE * 8; // better occupancy
     const unsigned long block_number = (length + block_size * CWORD_SIZE(T) - 1) / (block_size * CWORD_SIZE(T));
-    delta_afl_decompress_gpu <T, CWARP_SIZE> <<<block_number, block_size>>> (bit_length, compressed_data, compressed_data_block_start, data, length);
+    delta_afl_decompress_gpu <T, CWARP_SIZE> <<<block_number, block_size>>> (bit_length, compressed_data, compressed_data_block_start,data, length);
 }
 
 #define DELTA_GFL_SPEC(X, A) \

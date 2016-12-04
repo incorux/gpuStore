@@ -1,10 +1,3 @@
-/*
- *  afl_encoding.hpp
- *
- *  Created on: 25-10-2015
- *      Author: Karol Dzitkowski
- */
-
 #ifndef DDJ_DELTA_AFL_ENCODING_HPP_
 #define DDJ_DELTA_AFL_ENCODING_HPP_
 
