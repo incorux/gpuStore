@@ -67,7 +67,7 @@ SharedCudaPtrVector<char> DeltaAflEncoding::Encode(SharedCudaPtr<T> data) {
 	host_metadata[0] = minBit;
 	host_metadata[1] = rest;
 
-	run_delta_afl_compress_gpu<T, 1>(minBit, data->get(), (T*) result->get(), (T*) dataBlockStart->get(),
+	run_delta_afl_compress_gpu<T, 32>(minBit, data->get(), (T*) result->get(), (T*) dataBlockStart->get(),
 			comprDataSize / sizeof(T));
 
 	metadata->fillFromHost(host_metadata, 4 * sizeof(char));
@@ -87,7 +87,7 @@ SharedCudaPtr<T> DecodeDeltaAfl(T* data, T* dataBlockStart, size_t size, unsigne
 	unsigned long length = comprBits / minBit;
 
 	auto result = CudaPtr<T>::make_shared(length);
-	run_delta_afl_decompress_gpu<T, 1>(minBit, data, dataBlockStart, (T*) result->get(), length);
+	run_delta_afl_decompress_gpu<T, 32>(minBit, data, dataBlockStart, (T*) result->get(), length);
 	cudaDeviceSynchronize();
 	CUDA_ASSERT_RETURN(cudaGetLastError());
 
