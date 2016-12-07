@@ -6,6 +6,9 @@
 #include <boost/bind.hpp>
 #include "delta_afl_gpu.cuh"
 #include "core/cuda_array.hpp"
+#include "string.h"
+
+#define LNBITSTOMASK(n) ((1L<<(n)) - 1)
 
 namespace ddj {
 
@@ -59,9 +62,17 @@ TEST_P(DeltaAflCompressionTest, DeltaAfl_Encode_Decode_RandomInts_size)
 
     //host_data = &data->copyToHost();
     std::cout << "Before compression host data:\n";
-    for(int i = 0 ; i < max_size; i++){
-    	host_data[i] = i;
-    }
+    //COPYPASTA
+    srand (time(NULL));
+    __xorshf96_x=(unsigned long) rand();
+    __xorshf96_y=(unsigned long) rand();
+    __xorshf96_z=(unsigned long) rand();
+    unsigned long mask = LNBITSTOMASK(bit_length);
+        for (unsigned long i = 0; i < max_size; i++){
+            host_data[i] = xorshf96() & mask;
+            printf("%l",host_data[i]);
+        }
+	//COPYPASTA END
     std::cout << "\n";
 
     cudaMemcpy(dev_data, host_data, data_size, cudaMemcpyHostToDevice);
@@ -93,6 +104,8 @@ TEST_P(DeltaAflCompressionTest, DeltaAfl_Encode_Decode_RandomInts_size)
     	std::cout << host_data2[i];
     }
     std::cout << "\n";
+
+    EXPECT_TRUE(memcmp(host_data, host_data2, max_size *sizeof(int)));
 
     cudaFree(dev_out);
     cudaFree(dev_data);
