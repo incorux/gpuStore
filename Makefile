@@ -22,7 +22,7 @@ LIBS := -lcudart -lboost_system -lboost_thread -lpthread \
 
 GENCODE_SM50    := -gencode arch=compute_50,code=sm_50
 
-LIB_DIRS := -L"/usr/local/cuda/lib64" -L"/usr/local/lib"
+LIB_DIRS := -L"/usr/local/cuda/lib64" -L"libs"
 DATE := date
 GENCODE_FLAGS   := $(GENCODE_SM50)
 

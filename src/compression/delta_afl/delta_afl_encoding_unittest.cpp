@@ -21,20 +21,13 @@ INSTANTIATE_TEST_CASE_P(
 
 TEST_P(DeltaAflCompressionTest, DeltaAfl_Encode_Decode_RandomInts_size)
 {
-	/*	DeltaAflEncoding encoder;
-    EXPECT_TRUE(
-		TestSize<int>(
-			boost::bind(&DeltaAflEncoding::Encode<int>, encoder, _1),
-			boost::bind(&DeltaAflEncoding::Decode<int>, encoder, _1),
-			GetIntRandomData())
-    );*/
-    auto data = GetIntRandomData();
+	// Variable processing
     const int WARP_SIZE = 32;
-    unsigned int bit_length = CudaArrayStatistics().MinBitCnt<int>(data);
+    unsigned int bit_length = 10; //CudaArrayStatistics().MinBitCnt<int>(data); // Returning 10 for ints
     int cword = sizeof(int) * 8;
-    unsigned long max_size = data->size();
+    unsigned long max_size = 1000;
     unsigned long data_size =  max_size * sizeof(int);
-    unsigned long data_chunk = cword* WARP_SIZE;
+    unsigned long data_chunk = cword * WARP_SIZE;
     unsigned long compressed_data_size = (max_size < data_chunk  ? data_chunk : max_size);
     compressed_data_size = ((compressed_data_size * bit_length + (data_chunk)-1) / (data_chunk)) * 32 * sizeof(int) + (cword) * sizeof(int);
 	int compression_blocks_count = (compressed_data_size + (sizeof(int) * WARP_SIZE) - 1) / (sizeof(int) * WARP_SIZE);
@@ -45,22 +38,13 @@ TEST_P(DeltaAflCompressionTest, DeltaAfl_Encode_Decode_RandomInts_size)
 	std::cout << compressed_data_size << "Compressed data size\n";
 	std::cout << data_size << "Data size\n";
 
-	__device__ int *dev_out;
-	__device__ int *dev_data;
-	__device__ int *dev_data_block_start;
-    int *host_data;
-    int *host_data2;
-    int *host_data_block_start;
+	// Declarations and instantiations
+    auto result = CudaPtr<int>::make_shared(data_size);
+    auto initial_data = CudaPtr<int>::make_shared(data_size);
+    auto data_block_start = CudaPtr<int>::make_shared(compression_blocks_count);
+    auto compressed_data = CudaPtr<int>::make_shared(compressed_data_size);
 
-    cudaMallocHost((void**)&host_data,  data_size);
-    cudaMallocHost((void**)&host_data2,  data_size);
-    cudaMallocHost((void**)&host_data_block_start,  compression_blocks_count * sizeof(unsigned long));
-
-    cudaMalloc((void **) &dev_out, compressed_data_size);
-    cudaMalloc((void **) &dev_data, data_size);
-    cudaMalloc((void **) &dev_data_block_start, compression_blocks_count * sizeof(unsigned long));
-
-    //host_data = &data->copyToHost();
+    // Create input data
     std::cout << "Before compression host data:\n";
     //COPYPASTA
     srand (time(NULL));
@@ -68,51 +52,27 @@ TEST_P(DeltaAflCompressionTest, DeltaAfl_Encode_Decode_RandomInts_size)
     __xorshf96_y=(unsigned long) rand();
     __xorshf96_z=(unsigned long) rand();
     unsigned long mask = LNBITSTOMASK(bit_length);
-        for (unsigned long i = 0; i < max_size; i++){
-            host_data[i] = xorshf96() & mask;
-            printf("%l",host_data[i]);
-        }
+    std::vector<int> host_data;
+	for (unsigned long i = 0; i < max_size; i++){
+		host_data.push_back(max_size - i); //xorshf96() & mask;
+		if(i < 100)
+			printf("%i ", host_data[i]);
+	}
+	initial_data->fillFromHost(host_data.data(), data_size);
 	//COPYPASTA END
     std::cout << "\n";
-
-    cudaMemcpy(dev_data, host_data, data_size, cudaMemcpyHostToDevice);
-    cudaMemset(dev_out, 0, compressed_data_size);
-    cudaMemset(dev_data_block_start, 0, compression_blocks_count * sizeof(unsigned long));
-
-	/*auto compressed_data = CudaPtr<int>::make_shared(compressed_data_size);
-	auto dev_data_block_start = CudaPtr<int>::make_shared(compression_blocks_count);
-	auto decompressed_data = CudaPtr<int>::make_shared(max_size);
-	dev_data_block_start->reset(compression_blocks_count * sizeof(int));
-	decompressed_data->reset(data->size() * sizeof(int));*/
-
     std::cout << "Compressing...\n";
-    run_delta_afl_compress_gpu <int, WARP_SIZE> (bit_length, dev_data, dev_out, dev_data_block_start, max_size);
+    run_delta_afl_compress_gpu <int, WARP_SIZE> (bit_length, initial_data->get(), compressed_data->get(), data_block_start->get(), max_size);
     std::cout << "Decompressing...\n";
-    cudaMemset(dev_data, 0, data_size);
-    run_delta_afl_decompress_gpu <int, WARP_SIZE> (bit_length, dev_out, dev_data_block_start, dev_data, max_size);
-    cudaMemset(host_data2, 0, data_size);
-    cudaMemcpy(host_data2, dev_data, data_size, cudaMemcpyDeviceToHost);
-    cudaMemcpy(host_data_block_start, dev_data_block_start, compression_blocks_count * sizeof(unsigned long), cudaMemcpyDeviceToHost);
-
-	/*cudaArray.Print(data->copy(100), "encoded");
-	cudaArray.Print(dev_data_block_start->copy(compression_blocks_count > 10 ? 10 : compression_blocks_count), "helper");
-	cudaArray.Print(decompressed_data->copy(100), "decoded");
-
-    EXPECT_TRUE(CompareDeviceArrays(data->get(), decompressed_data->get(), data->size()));*/
+    run_delta_afl_decompress_gpu <int, WARP_SIZE> (bit_length, compressed_data->get(), data_block_start->get(), result->get(), max_size);
     std::cout << "Decompressed";
-    for(int i = 0 ; i <  100; i++){
-    	std::cout << host_data2[i];
-    }
-    std::cout << "\n";
 
-    EXPECT_TRUE(memcmp(host_data, host_data2, max_size *sizeof(int)));
+    int* host_data2;
+    host_data2 = result->copyToHost()->data();
+    for(int i = 0; i < 100; i++)
+    	printf("%i ", host_data2[i]);
 
-    cudaFree(dev_out);
-    cudaFree(dev_data);
-    cudaFree(dev_data_block_start);
-    cudaFreeHost(host_data);
-    cudaFreeHost(host_data2);
-    cudaFreeHost(host_data_block_start);
+    EXPECT_TRUE(CompareDeviceArrays(initial_data->get(), result->get(), max_size));
 }
 
 /*
