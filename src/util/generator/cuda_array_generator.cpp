@@ -65,6 +65,16 @@ namespace ddj
 		return result;
 	}
 
+	SharedCudaPtr<int> CudaArrayGenerator::GenerateDescendingDeviceArray(int size){
+		std::vector<int> host_data;
+		for (unsigned long i = 0; i < size; i++){
+			host_data.push_back(size - i);
+		}
+		auto result = CudaPtr<int>::make_shared(size);
+		result->fillFromHost(host_data.data(), size);
+		return result;
+	}
+
 	template<typename T>
 	SharedCudaPtr<T> CudaArrayGenerator::GetFakeDataWithPatternA(
 			int part,

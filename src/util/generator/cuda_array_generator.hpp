@@ -29,6 +29,7 @@ public:
     SharedCudaPtr<int> GenerateRandomIntDeviceArray(int size, int from, int to);
     SharedCudaPtr<int> GenerateConsecutiveIntDeviceArray(int size);
     SharedCudaPtr<int> GenerateRandomStencil(int size);
+    SharedCudaPtr<int> GenerateDescendingDeviceArray(int size);
     template<typename T> SharedCudaPtr<T> CreateConsecutiveNumbersArray(int size, T start);
     template<typename T> SharedCudaPtr<T> CreateConsecutiveNumbersArray(int size, T start, T step);
     SharedCudaPtr<float> CreateRandomFloatsWithMaxPrecision(int size, int maxPrecision);

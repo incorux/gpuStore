@@ -8,8 +8,6 @@
 #include "core/cuda_array.hpp"
 #include "string.h"
 
-#define LNBITSTOMASK(n) ((1L<<(n)) - 1)
-
 namespace ddj {
 
 class DeltaAflCompressionTest : public CompressionUnittestBase {};
@@ -23,56 +21,40 @@ TEST_P(DeltaAflCompressionTest, DeltaAfl_Encode_Decode_RandomInts_size)
 {
 	// Variable processing
     const int WARP_SIZE = 32;
-    unsigned int bit_length = 10; //CudaArrayStatistics().MinBitCnt<int>(data); // Returning 10 for ints
     int cword = sizeof(int) * 8;
-    unsigned long max_size = 1000;
+	int max_size = 1000;
+    SharedCudaPtr<int> initial_data = CudaArrayGenerator().GenerateDescendingDeviceArray(max_size);
+    unsigned int bit_length = CudaArrayStatistics().MinBitCnt<int>(initial_data);
     unsigned long data_size =  max_size * sizeof(int);
     unsigned long data_chunk = cword * WARP_SIZE;
     unsigned long compressed_data_size = (max_size < data_chunk  ? data_chunk : max_size);
     compressed_data_size = ((compressed_data_size * bit_length + (data_chunk)-1) / (data_chunk)) * 32 * sizeof(int) + (cword) * sizeof(int);
 	int compression_blocks_count = (compressed_data_size + (sizeof(int) * WARP_SIZE) - 1) / (sizeof(int) * WARP_SIZE);
     //
-    CudaArray cudaArray;
     std::cout << bit_length << "MinBit\n";
 	std::cout << compression_blocks_count << "Blocks number\n";
 	std::cout << compressed_data_size << "Compressed data size\n";
 	std::cout << data_size << "Data size\n";
 
 	// Declarations and instantiations
-    auto result = CudaPtr<int>::make_shared(data_size);
-    auto initial_data = CudaPtr<int>::make_shared(data_size);
+    auto result = CudaPtr<int>::make_shared(max_size);
     auto data_block_start = CudaPtr<int>::make_shared(compression_blocks_count);
-    auto compressed_data = CudaPtr<int>::make_shared(compressed_data_size);
+    auto compressed_data = CudaPtr<char>::make_shared(compressed_data_size);
 
     // Create input data
     std::cout << "Before compression host data:\n";
-    //COPYPASTA
-    srand (time(NULL));
-    __xorshf96_x=(unsigned long) rand();
-    __xorshf96_y=(unsigned long) rand();
-    __xorshf96_z=(unsigned long) rand();
-    unsigned long mask = LNBITSTOMASK(bit_length);
-    std::vector<int> host_data;
-	for (unsigned long i = 0; i < max_size; i++){
-		host_data.push_back(max_size - i); //xorshf96() & mask;
-		if(i < 100)
-			printf("%i ", host_data[i]);
-	}
-	initial_data->fillFromHost(host_data.data(), data_size);
-	//COPYPASTA END
+	CudaArray().Print(initial_data, "\ninitial data");
+
     std::cout << "\n";
     std::cout << "Compressing...\n";
-    run_delta_afl_compress_gpu <int, WARP_SIZE> (bit_length, initial_data->get(), compressed_data->get(), data_block_start->get(), max_size);
+    run_delta_afl_compress_gpu <int, WARP_SIZE> (bit_length, initial_data->get(), (int *) compressed_data->get(), data_block_start->get(), max_size);
     std::cout << "Decompressing...\n";
-    run_delta_afl_decompress_gpu <int, WARP_SIZE> (bit_length, compressed_data->get(), data_block_start->get(), result->get(), max_size);
-    std::cout << "Decompressed";
+    run_delta_afl_decompress_gpu <int, WARP_SIZE> (bit_length, (int *) compressed_data->get(), data_block_start->get(), result->get(), max_size);
+    std::cout << "Decompressed:\n";
 
-    int* host_data2;
-    host_data2 = result->copyToHost()->data();
-    for(int i = 0; i < 100; i++)
-    	printf("%i ", host_data2[i]);
+    CudaArray().Print(result, "\ndecompressed data");
 
-    EXPECT_TRUE(CompareDeviceArrays(initial_data->get(), result->get(), max_size));
+    EXPECT_TRUE(CompareDeviceArrays(initial_data->get(), result->get(), initial_data->size()));
 }
 
 /*
