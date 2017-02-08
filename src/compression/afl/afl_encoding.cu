@@ -40,7 +40,7 @@ SharedCudaPtrVector<char> AflEncoding::Encode(SharedCudaPtr<T> data) {
 	host_metadata[1] = rest;
 
 	run_afl_compress_gpu<T, 1>(minBit, data->get(), (T*) result->get(),
-			data->size(), comprDataSize / sizeof(T));
+			data->size());
 
 	metadata->fillFromHost(host_metadata, 4 * sizeof(char));
 	CUDA_CALL(cudaFreeHost(host_metadata));

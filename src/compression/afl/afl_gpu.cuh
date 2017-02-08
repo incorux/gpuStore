@@ -12,15 +12,15 @@
 #define FL_ALGORITHM_MOD_AFL 32 
 
 template < typename T , char CWARP_SIZE > __host__ void run_afl_decompress_cpu ( const unsigned int bit_length , T *data            , T *compressed_data   , unsigned long length);
-template < typename T , char CWARP_SIZE > __host__ void run_afl_compress_cpu   ( const unsigned int bit_length , T *compressed_data , T *decompressed_data , unsigned long length, unsigned long comprLength);
+template < typename T , char CWARP_SIZE > __host__ void run_afl_compress_cpu   ( const unsigned int bit_length , T *compressed_data , T *decompressed_data , unsigned long length);
 
 template < typename T , char CWARP_SIZE > __host__ void run_afl_decompress_gpu ( const unsigned int bit_length , T *data            , T *compressed_data   , unsigned long length);
-template < typename T , char CWARP_SIZE > __host__ void run_afl_compress_gpu   ( const unsigned int bit_length , T *compressed_data , T *decompressed_data , unsigned long length, unsigned long comprLength);
+template < typename T , char CWARP_SIZE > __host__ void run_afl_compress_gpu   ( const unsigned int bit_length , T *compressed_data , T *decompressed_data , unsigned long length);
 
 template < typename T, char CWARP_SIZE > __host__ void run_afl_decompress_value_gpu  ( const unsigned int bit_length, T *compressed_data, T *data, unsigned long length);
 template < typename T, char CWARP_SIZE > __host__ void run_afl_compress_value_cpu    ( const unsigned int bit_length, T *data, T *compressed_data, const unsigned long length);
 
-template < typename T , char CWARP_SIZE > __global__ void afl_compress_gpu     ( const unsigned int bit_length , T *data            , T *compressed_data   , unsigned long length, unsigned long comprLength);
+template < typename T , char CWARP_SIZE > __global__ void afl_compress_gpu     ( const unsigned int bit_length , T *data            , T *compressed_data   , unsigned long length);
 template < typename T , char CWARP_SIZE > __global__ void afl_decompress_gpu   ( const unsigned int bit_length , T *compressed_data , T * decompress_data  , unsigned long length);
 template < typename T , char CWARP_SIZE > __global__ void afl_decompress_value_gpu            ( const unsigned int bit_length, T *compressed_data, T *decompress_data, unsigned long length);
 

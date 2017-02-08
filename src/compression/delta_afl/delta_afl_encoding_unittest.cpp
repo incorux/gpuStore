@@ -17,47 +17,6 @@ INSTANTIATE_TEST_CASE_P(
 	DeltaAflCompressionTest,
     ::testing::Values(1000, 100000));
 
-TEST_P(DeltaAflCompressionTest, DeltaAfl_Encode_Decode_RandomInts_size)
-{
-	// Variable processing
-    const int WARP_SIZE = 32;
-    int cword = sizeof(int) * 8;
-	int max_size = 1000;
-    SharedCudaPtr<int> initial_data = CudaArrayGenerator().GenerateDescendingDeviceArray(max_size);
-    unsigned int bit_length = CudaArrayStatistics().MinBitCnt<int>(initial_data);
-    unsigned long data_size =  max_size * sizeof(int);
-    unsigned long data_chunk = cword * WARP_SIZE;
-    unsigned long compressed_data_size = (max_size < data_chunk  ? data_chunk : max_size);
-    compressed_data_size = ((compressed_data_size * bit_length + (data_chunk)-1) / (data_chunk)) * 32 * sizeof(int) + (cword) * sizeof(int);
-	int compression_blocks_count = (compressed_data_size + (sizeof(int) * WARP_SIZE) - 1) / (sizeof(int) * WARP_SIZE);
-    //
-    std::cout << bit_length << "MinBit\n";
-	std::cout << compression_blocks_count << "Blocks number\n";
-	std::cout << compressed_data_size << "Compressed data size\n";
-	std::cout << data_size << "Data size\n";
-
-	// Declarations and instantiations
-    auto result = CudaPtr<int>::make_shared(max_size);
-    auto data_block_start = CudaPtr<int>::make_shared(compression_blocks_count);
-    auto compressed_data = CudaPtr<char>::make_shared(compressed_data_size);
-
-    // Create input data
-    std::cout << "Before compression host data:\n";
-	CudaArray().Print(initial_data, "\ninitial data");
-
-    std::cout << "\n";
-    std::cout << "Compressing...\n";
-    run_delta_afl_compress_gpu <int, WARP_SIZE> (bit_length, initial_data->get(), (int *) compressed_data->get(), data_block_start->get(), max_size);
-    std::cout << "Decompressing...\n";
-    run_delta_afl_decompress_gpu <int, WARP_SIZE> (bit_length, (int *) compressed_data->get(), data_block_start->get(), result->get(), max_size);
-    std::cout << "Decompressed:\n";
-
-    CudaArray().Print(result, "\ndecompressed data");
-
-    EXPECT_TRUE(CompareDeviceArrays(initial_data->get(), result->get(), initial_data->size()));
-}
-
-/*
 TEST_P(DeltaAflCompressionTest, DeltaAfl_Encode_Decode_RandomInts_data)
 {
 	DeltaAflEncoding encoder;
@@ -65,10 +24,10 @@ TEST_P(DeltaAflCompressionTest, DeltaAfl_Encode_Decode_RandomInts_data)
 		TestContent<int>(
 			boost::bind(&DeltaAflEncoding::Encode<int>, encoder, _1),
 			boost::bind(&DeltaAflEncoding::Decode<int>, encoder, _1),
-			GetIntRandomData())
+			CudaArrayGenerator().GenerateDescendingDeviceArray(10000))
 	);
 }
-
+/*
 TEST_P(DeltaAflCompressionTest, DeltaAfl_Encode_Decode_RandomInts_bigData)
 {
 	DeltaAflEncoding encoder;

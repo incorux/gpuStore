@@ -50,25 +50,27 @@ SharedCudaPtrVector<char> DeltaAflEncoding::Encode(SharedCudaPtr<T> data) {
 
 	// Get minimal bit count needed to encode data
 	char minBit = CudaArrayStatistics().MinBitCnt<T>(data);
-	int block_size = 8;
-	int elemBitSize = block_size * sizeof(T);
-	int comprElemCnt = (minBit * data->size() + elemBitSize - 1) / elemBitSize;
-	int comprDataSize = comprElemCnt * sizeof(T);
-	char rest = (comprDataSize * block_size) - (data->size() * minBit);
-    unsigned long block_number = (minBit + block_size * CWORD_SIZE(T) - 1) / (block_size * CWORD_SIZE(T));
+	//SharedCudaPtr<int> initial_data = CudaArrayGenerator().GenerateDescendingDeviceArray(max_size);
+	const int WARP_SIZE = 32;
+	int cword = sizeof(T) * 8;
+	unsigned int bit_length = CudaArrayStatistics().MinBitCnt<T>(data);
+	int max_size = data->size();
+	unsigned long data_size =  max_size * sizeof(int);
+	unsigned long data_chunk = cword * WARP_SIZE;
+	unsigned long compressed_data_size = (max_size < data_chunk  ? data_chunk : max_size);
+	compressed_data_size = ((compressed_data_size * bit_length + (data_chunk)-1) / (data_chunk)) * WARP_SIZE * sizeof(T) + (cword) * sizeof(T);
+	int compression_blocks_count = (compressed_data_size + (sizeof(T) * WARP_SIZE) - 1) / (sizeof(T) * WARP_SIZE);
 
-
-	auto result = CudaPtr<char>::make_shared(comprDataSize);
+	auto result = CudaPtr<char>::make_shared(compressed_data_size);
 	auto metadata = CudaPtr<char>::make_shared(4 * sizeof(char));
-	auto dataBlockStart= CudaPtr<char>::make_shared(block_number * sizeof(unsigned long));
+	auto dataBlockStart= CudaPtr<char>::make_shared(compression_blocks_count * sizeof(T));
 
 	char* host_metadata;
 	CUDA_CALL(cudaMallocHost(&host_metadata, 4));
 	host_metadata[0] = minBit;
-	host_metadata[1] = rest;
 
-	run_delta_afl_compress_gpu<T, 32>(minBit, data->get(), (T*) result->get(), (T*) dataBlockStart->get(),
-			comprDataSize / sizeof(T));
+	run_delta_afl_compress_gpu<T, 32>(minBit, data->get(), (T*) result->get(), (T*) dataBlockStart->get(), max_size);
+			//compressed_data_size / sizeof(T));
 
 	metadata->fillFromHost(host_metadata, 4 * sizeof(char));
 	CUDA_CALL(cudaFreeHost(host_metadata));
@@ -81,9 +83,9 @@ SharedCudaPtrVector<char> DeltaAflEncoding::Encode(SharedCudaPtr<T> data) {
 }
 
 template<typename T>
-SharedCudaPtr<T> DecodeDeltaAfl(T* data, T* dataBlockStart, size_t size, unsigned int minBit, int rest) {
+SharedCudaPtr<T> DecodeDeltaAfl(T* data, T* dataBlockStart, size_t size, unsigned int minBit) {
 	// Calculate length
-	long long comprBits = size * 8 - rest;
+	long long comprBits = size * 8;
 	unsigned long length = comprBits / minBit;
 
 	auto result = CudaPtr<T>::make_shared(length);
@@ -109,10 +111,9 @@ SharedCudaPtr<T> DeltaAflEncoding::Decode(SharedCudaPtrVector<char> input) {
 
 	// Get min bit and rest
 	int minBit = (*metadata)[0];
-	int rest = (*metadata)[1];
 
 	// Perform decoding
-	auto result = DecodeDeltaAfl<T>((T*) data->get(), (T*) dataBlockStart->get(), data->size(), minBit, rest);
+	auto result = DecodeDeltaAfl<T>((T*) data->get(), (T*) dataBlockStart->get(), data->size(), minBit);
 
 	LOG4CPLUS_INFO(_logger, "DELTA AFL decoding END");
 	return result;
@@ -201,7 +202,7 @@ SharedCudaPtr<float> DeltaAflEncoding::Decode(SharedCudaPtrVector<char> input) {
 
 	// decode mantissa
 	auto mantissaDecoded = DecodeDeltaAfl<int>((int*) (data->get() + offset), (int*) (dataBlockStart->get() + offset),
-			compressedMantissaSize, minBit, rest);
+			compressedMantissaSize, minBit);
 	long int compressedExponentSize = data->size() - compressedMantissaSize - 8;
 	offset += compressedMantissaSize;
 
@@ -213,7 +214,7 @@ SharedCudaPtr<float> DeltaAflEncoding::Decode(SharedCudaPtrVector<char> input) {
 
 	// decode exponent
 	auto exponentDecoded = DecodeDeltaAfl<int>((int*) (data->get() + offset), (int*) (dataBlockStart->get() + offset),
-			compressedExponentSize, minBit, rest);
+			compressedExponentSize, minBit);
 
 	// recover signs
 	Stencil stencil;
