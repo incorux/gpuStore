@@ -20,14 +20,15 @@ INSTANTIATE_TEST_CASE_P(
 TEST_P(DeltaAflCompressionTest, DeltaAfl_Encode_Decode_RandomInts_data)
 {
 	DeltaAflEncoding encoder;
+	std::cout << "TEST" << "\n";
 	EXPECT_TRUE(
 		TestContent<int>(
 			boost::bind(&DeltaAflEncoding::Encode<int>, encoder, _1),
 			boost::bind(&DeltaAflEncoding::Decode<int>, encoder, _1),
-			CudaArrayGenerator().GenerateDescendingDeviceArray(10000))
+			CudaArrayGenerator().GenerateRandomIntDeviceArray(100000, 10, 1000))
 	);
 }
-/*
+
 TEST_P(DeltaAflCompressionTest, DeltaAfl_Encode_Decode_RandomInts_bigData)
 {
 	DeltaAflEncoding encoder;
@@ -35,7 +36,7 @@ TEST_P(DeltaAflCompressionTest, DeltaAfl_Encode_Decode_RandomInts_bigData)
 		TestContent<int>(
 			boost::bind(&DeltaAflEncoding::Encode<int>, encoder, _1),
 			boost::bind(&DeltaAflEncoding::Decode<int>, encoder, _1),
-			CudaArrayGenerator().GenerateRandomIntDeviceArray(1<<20, 10, 1000))
+			CudaArrayGenerator().GenerateRandomIntDeviceArray(1000, 10, 1000))
 	);
 }
 
@@ -150,6 +151,6 @@ TEST_P(DeltaAflCompressionTest, GetCompressedSize_Consecutive_Int)
 	TestGetCompressedSize<DeltaAflEncoding, int>(GetIntConsecutiveData());
 	TestGetCompressedSize<DeltaAflEncoding, int>(GetIntRandomData(10,100));
 	TestGetCompressedSize<DeltaAflEncoding, float>(GetFloatRandomDataWithMaxPrecision(2));
-}*/
+}
 
 } /* namespace ddj */

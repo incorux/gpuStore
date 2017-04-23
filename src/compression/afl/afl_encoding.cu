@@ -24,8 +24,8 @@ SharedCudaPtrVector<char> AflEncoding::Encode(SharedCudaPtr<T> data) {
 				CudaPtr<char>::make_shared() };
 
 	// Get minimal bit count needed to encode data
-	char minBit = CudaArrayStatistics().MinBitCnt<T>(data);
-
+	char minBit = (char)11;//CudaArrayStatistics().MinBitCnt<T>(data);
+	std::cout<< "Minbit: " << (int) minBit << "\n";
 	int elemBitSize = 8 * sizeof(T);
 	int comprElemCnt = (minBit * data->size() + elemBitSize - 1) / elemBitSize;
 	int comprDataSize = comprElemCnt * sizeof(T);

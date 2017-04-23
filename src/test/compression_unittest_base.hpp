@@ -37,6 +37,8 @@ public:
 		auto encoded = encoder->Encode(testData, GetDataType<T>());
 		auto expected = encoded[0]->size();
 		auto actual = encoder->GetMetadataSize(testData, GetDataType<T>());
+		std::cout << "Expected: " << expected << "\n";
+		std::cout << "Actual: " << actual<< "\n";
 		EXPECT_EQ(expected, actual);
 	}
 
@@ -50,6 +52,8 @@ public:
 		for(int i=1; i <= encoder->GetNumberOfResults(); i++)
 			expected += encoded[i]->size();
 		auto actual = encoder->GetCompressedSize(testData, GetDataType<T>());
+		std::cout << "Expected: " << expected << "\n";
+		std::cout << "Actual: " << actual<< "\n";
 		EXPECT_EQ(expected, actual);
 	}
 

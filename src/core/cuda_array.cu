@@ -35,20 +35,26 @@ __host__ __device__ bool _floatsEqual(float a, float b, int maxulps)
 
 __global__ void _compareFloatsKernel(float* a, float* b, int size, bool* out)
 {
-	unsigned int iElement = blockDim.x * blockIdx.x + threadIdx.x;
+/*	unsigned int iElement = blockDim.x * blockIdx.x + threadIdx.x;
 	if (iElement >= size) return;
 	out[iElement] =
 			!_floatsEqual(a[iElement], b[iElement], 8) &&
-			abs(a[iElement] - b[iElement]) > MAX_FLOAT_DIFF;
+			abs(a[iElement] - b[iElement]) > MAX_FLOAT_DIFF;*/
+	unsigned int iElement = blockDim.x * blockIdx.x + threadIdx.x;
+	if (iElement >= size) return;
+	out[iElement] = a[iElement] != b[iElement];
 }
 
 __global__ void _compareDoublesKernel(double* a, double* b, int size, bool* out)
 {
-	unsigned int iElement = blockDim.x * blockIdx.x + threadIdx.x;
+/*	unsigned int iElement = blockDim.x * blockIdx.x + threadIdx.x;
 	if (iElement >= size) return;
 	out[iElement] =
 			!_floatsEqual(a[iElement], b[iElement], 8) &&
-			abs(a[iElement] - b[iElement]) > MAX_FLOAT_DIFF;
+			abs(a[iElement] - b[iElement]) > MAX_FLOAT_DIFF;*/
+	unsigned int iElement = blockDim.x * blockIdx.x + threadIdx.x;
+	if (iElement >= size) return;
+	out[iElement] = a[iElement] != b[iElement];
 }
 
 template <typename T>
